@@ -30,8 +30,11 @@ def build_module(opts):
                           relay.nn.softmax(func.body), None,
                           func.type_params, func.attrs)
 
-    target_device = "webgpu -modle=1080ti"
     target_host = "llvm -target=wasm32-unknown-unknown-wasm -system-lib"
+    if opts.mode == "webgpu":
+        target_device = "webgpu -model=1080ti"
+    else:
+        target_device = target_host
 
     with relay.build_config(opt_level=3):
         graph, lib, params = relay.build(
@@ -66,8 +69,8 @@ def prepare_data(opts):
     image_fn = os.path.join(build_dir, "cat.png")
     download_testdata(image_url, image_fn)
     # copy runtime js files.
-    shutil.copyfile(libinfo.find_lib_path("tvmjs.bundle.js")[0],
-                    os.path.join(build_dir, "tvmjs.bundle.js"))
+    shutil.copyfile(libinfo.find_lib_path("tvmjs_runtime.js")[0],
+                    os.path.join(build_dir, "tvmjs_runtime.js"))
     shutil.copyfile(libinfo.find_lib_path("tvmjs_runtime.wasi.js")[0],
                     os.path.join(build_dir, "tvmjs_runtime.wasi.js"))
     shutil.copyfile(os.path.join(curr_dir, "index.html"),
@@ -78,7 +81,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--out-dir", default=os.path.join(curr_dir, "dist"))
     parser.add_argument("--network", default="mobilenet1.0")
-    parser.add_argument('-p', '--prepare', action='store_true')
+    parser.add_argument("-p", "--prepare", action="store_true")
+    parser.add_argument(
+        "-m",
+        "--mode",
+        default="webgpu",
+        choices=["webgpu", "wasm"],
+    )
 
     opts = parser.parse_args()
 
